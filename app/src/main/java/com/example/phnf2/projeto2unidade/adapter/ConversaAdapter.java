@@ -57,6 +57,10 @@ public class ConversaAdapter extends RecyclerView.Adapter {
         holder.TextNome.setText(conversaEscolhida.getNome());
         holder.TextData.setText(""+conversaEscolhida.getData());
 
+
+
+
+
     }
 
     @Override

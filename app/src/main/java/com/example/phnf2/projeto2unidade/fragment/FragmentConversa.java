@@ -158,20 +158,11 @@ public class FragmentConversa extends Fragment {
             @Override
             public void onLinkMapsLongClick(View view, int posicao) {
 
-
                 Toast.makeText(getContext(), "Toque Longo", Toast.LENGTH_SHORT).show();
 
-
-//                String procurar = "https://www.google.com/maps/place/";
-//
-//                String local = getActivity().getIntent().getStringExtra("localMaps");
-//
-//                    Log.i("PDM", "Conteudo Intent Teste2:" + local);
-//
-//                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(local));
-//                    startActivity(intent);
-
             }
+
+
         }));
 
         return v;
