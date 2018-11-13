@@ -4,14 +4,15 @@ package com.example.phnf2.projeto2unidade.fragment;
 import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.database.Cursor;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
 import android.provider.MediaStore;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
+import android.support.v4.content.ContextCompat;
+import android.support.v4.content.FileProvider;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -19,6 +20,21 @@ import android.widget.Button;
 import android.widget.ImageView;
 
 import com.example.phnf2.projeto2unidade.R;
+import com.example.phnf2.projeto2unidade.modelo.Conversa;
+import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.StorageReference;
+import com.google.firebase.storage.UploadTask;
+
+import java.io.File;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.GregorianCalendar;
+import java.util.Locale;
 
 import static android.app.Activity.RESULT_OK;
 
@@ -27,12 +43,18 @@ import static android.app.Activity.RESULT_OK;
  */
 public class Camera extends Fragment  {
 
-    private final static int ACESSAR_GALERIA = 1;
     private ImageView imagem;
-    Button galeria;
     Button tirarFoto;
     private final static int PERMISSAO_REQUEST = 2;
     private final static int CAPTURAR_FOTO = 3;
+    private FirebaseStorage mFirebaseStorage;
+    private StorageReference mStorageReference;
+    private FirebaseDatabase fdata;
+    private DatabaseReference freference;
+    private FirebaseAuth fauth;
+    private String userName;
+    private File arquivoFoto = null;
+    private final static int PERMISSION_REQUEST = 11;
 
     public Camera() {
         // Required empty public constructor
@@ -45,37 +67,42 @@ public class Camera extends Fragment  {
         // Inflate the layout for this fragment
         View v =  inflater.inflate(R.layout.fragment_camera, container, false);
 
-        imagem = v.findViewById(R.id.camera_preview);
-        galeria = v.findViewById(R.id.selecione_captura);
+        mFirebaseStorage = FirebaseStorage.getInstance();
+        mStorageReference = mFirebaseStorage.getReference().child("chat_photos");
+        fdata = FirebaseDatabase.getInstance();
+        freference = fdata.getReference().child("messages");
+        //pegando a instancia do auth para pegar o usuario
+        fauth = FirebaseAuth.getInstance();
+
+
+
         tirarFoto = v.findViewById(R.id.capturarfoto);
 
-        galeria.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent intent = new Intent(Intent.ACTION_PICK,MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
-                startActivityForResult(intent,ACESSAR_GALERIA);
 
-            }
-        });
 
-        if (ActivityCompat.checkSelfPermission(getContext(),
-                Manifest.permission.READ_EXTERNAL_STORAGE)
-                != PackageManager.PERMISSION_GRANTED) {
-            if (ActivityCompat.shouldShowRequestPermissionRationale(getActivity(),
-                    Manifest.permission.READ_EXTERNAL_STORAGE)) {
-            } else {
-                ActivityCompat.requestPermissions(getActivity(),
-                        new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
-                        PERMISSAO_REQUEST);
-            }
-        }
 
         tirarFoto.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+
+                FirebaseUser user = fauth.getCurrentUser();
+                userName = user.getDisplayName();
+
                 Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
                 if (takePictureIntent.resolveActivity(getActivity().getPackageManager()) != null) {
-                    startActivityForResult(takePictureIntent,CAPTURAR_FOTO);
+
+                    try {
+                        arquivoFoto = createFile();
+                    } catch (IOException ex) {
+                        // Manipulação em caso de falha de criação do arquivo
+                    }
+                    if (arquivoFoto != null) {
+                        Uri photoURI = FileProvider.getUriForFile(getActivity(),
+                                getActivity().getApplicationContext().getPackageName() +
+                                        ".provider", arquivoFoto);
+                        takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI);
+                        startActivityForResult(takePictureIntent, CAPTURAR_FOTO);
+                    }
                 }
             }
         });
@@ -88,25 +115,46 @@ public class Camera extends Fragment  {
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
-        //Acesso a Galeria de fotos
-        if (resultCode == RESULT_OK && requestCode == ACESSAR_GALERIA) {
-            Uri selectedImage = data.getData();
-            String[] filePath = { MediaStore.Images.Media.DATA };
-            Cursor c = getActivity().getContentResolver().query(selectedImage,filePath, null, null, null);
-            c.moveToFirst();
-            int columnIndex = c.getColumnIndex(filePath[0]);
-            String picturePath = c.getString(columnIndex);
-            c.close();
-            Bitmap thumbnail = (BitmapFactory.decodeFile(picturePath));
-            imagem.setImageBitmap(thumbnail);
-        }
-           //Tirar foto
+        Locale locale = new Locale("pt", "BR");
+        GregorianCalendar calendar = new GregorianCalendar();
+        SimpleDateFormat formatador = new SimpleDateFormat("dd' de 'MMMMM' de 'yyyy' - 'HH':'mm'h'", locale);
+
+        //Tirar foto
         if (requestCode == CAPTURAR_FOTO && resultCode == RESULT_OK) {
-            Bundle extras = data.getExtras();
-            Bitmap imageBitmap = (Bitmap) extras.get("data");
-            imagem.setImageBitmap(imageBitmap);
+
+            getActivity().sendBroadcast(new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, Uri.fromFile(arquivoFoto)));
+
+            Uri image = Uri.fromFile(arquivoFoto);
+
+            StorageReference photoref = mStorageReference.child(userName + "_" + formatador.format(calendar.getTime()));
+
+            photoref.putFile(image).addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
+                @Override
+                public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
+                    // Get a URL to the uploaded content
+                    taskSnapshot.getStorage().getDownloadUrl().addOnSuccessListener(new OnSuccessListener<Uri>() {
+                        @Override
+                        public void onSuccess(Uri uri) {
+
+                            Locale locale = new Locale("pt", "BR");
+                            GregorianCalendar calendar = new GregorianCalendar();
+                            SimpleDateFormat formatador = new SimpleDateFormat("dd' de 'MMMMM' de 'yyyy' - 'HH':'mm'h'", locale);
+                            Log.i("teste",formatador.format(calendar.getTime()));
+
+                            Conversa conversa = new Conversa(null, userName, formatador.format(calendar.getTime()), uri.toString());
+
+                            freference.push().setValue(conversa);
+                        }
+                    });
+
+                }
+            });
         }
+
     }
+
+
+
 
 
     @Override
@@ -119,5 +167,34 @@ public class Camera extends Fragment  {
             }
             return;
         }
+
+        if (ContextCompat.checkSelfPermission(getContext(),
+                Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED) {
+            if (ActivityCompat.shouldShowRequestPermissionRationale(getActivity(),
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+            } else {
+                ActivityCompat.requestPermissions(getActivity(),
+                        new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                        PERMISSION_REQUEST);
+            }
+        }
+
     }
+
+    private File createFile() throws IOException {
+        Locale locale = new Locale("pt", "BR");
+        GregorianCalendar calendar = new GregorianCalendar();
+        SimpleDateFormat formatador = new SimpleDateFormat("dd' de 'MMMMM' de 'yyyy' - 'HH':'mm'h'", locale);
+
+        File pasta = Environment.getExternalStoragePublicDirectory(
+                Environment.DIRECTORY_PICTURES);
+        File imagem = new File(pasta.getPath() + File.separator
+                + "JPG_" + formatador.format(calendar.getTime()) + ".jpg");
+        Log.i("teste",formatador.format(calendar.getTime()));
+        return imagem;
+    }
+
+
+
 }

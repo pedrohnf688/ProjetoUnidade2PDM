@@ -18,7 +18,6 @@ import android.widget.Toast;
 
 import com.example.phnf2.projeto2unidade.R;
 import com.example.phnf2.projeto2unidade.adapter.ConversaAdapter;
-import com.example.phnf2.projeto2unidade.adapter.RecyclerLinkMapsClickListener;
 import com.example.phnf2.projeto2unidade.modelo.Conversa;
 import com.firebase.ui.auth.AuthUI;
 import com.google.android.gms.tasks.OnSuccessListener;
@@ -154,16 +153,6 @@ public class FragmentConversa extends Fragment {
 
         // Tratar clicks do recyclerview do link do maps
 
-        recyclerView.addOnItemTouchListener(new RecyclerLinkMapsClickListener(getContext(), recyclerView, new RecyclerLinkMapsClickListener.OnLinkMapsClickListener() {
-            @Override
-            public void onLinkMapsLongClick(View view, int posicao) {
-
-                Toast.makeText(getContext(), "Toque Longo", Toast.LENGTH_SHORT).show();
-
-            }
-
-
-        }));
 
         return v;
     }

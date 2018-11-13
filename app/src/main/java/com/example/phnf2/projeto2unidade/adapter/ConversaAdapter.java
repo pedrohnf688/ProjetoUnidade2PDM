@@ -1,6 +1,8 @@
 package com.example.phnf2.projeto2unidade.adapter;
 
 import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
 import android.support.annotation.NonNull;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
@@ -36,11 +38,11 @@ public class ConversaAdapter extends RecyclerView.Adapter {
     }
 
     @Override
-    public void onBindViewHolder(@NonNull RecyclerView.ViewHolder viewHolder, int posicao) {
+    public void onBindViewHolder(@NonNull RecyclerView.ViewHolder viewHolder, final int posicao) {
 
         ConversaViewHolder holder = (ConversaViewHolder) viewHolder;
 
-        Conversa conversaEscolhida = listaConversa.get(posicao);
+        final Conversa conversaEscolhida = listaConversa.get(posicao);
 
         boolean isPhoto = conversaEscolhida.getPhotoUrl() != null;
 
@@ -57,15 +59,27 @@ public class ConversaAdapter extends RecyclerView.Adapter {
         holder.TextNome.setText(conversaEscolhida.getNome());
         holder.TextData.setText(""+conversaEscolhida.getData());
 
+        holder.TextMensagem.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
 
+                String mensagem = conversaEscolhida.getMensagem();
 
+                 if(mensagem.substring(0,34).contains("https://www.google.com/maps/place/")){
+                    Uri uri = Uri.parse(mensagem);
+                    Intent intent = new Intent(Intent.ACTION_VIEW, uri);
+                    v.getContext().startActivity(intent);
+
+                }
+            }
+        });
 
 
     }
 
     @Override
     public int getItemCount() {
-        return listaConversa.size();
+        return listaConversa == null ? 0: listaConversa.size();
     }
 
 

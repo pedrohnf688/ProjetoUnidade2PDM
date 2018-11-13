@@ -1,6 +1,9 @@
 package com.example.phnf2.projeto2unidade.activity;
 
+import android.Manifest;
+import android.content.pm.PackageManager;
 import android.support.design.widget.TabLayout;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.view.PagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.support.v7.app.AppCompatActivity;
@@ -27,7 +30,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         tabLay = findViewById(R.id.tabLay);
-//Autenticação com o Firebase
+        //Autenticação com o Firebase
         mFirebase = FirebaseDatabase.getInstance();
 
         ViewPager vp = findViewById(R.id.pager);
@@ -39,7 +42,19 @@ public class MainActivity extends AppCompatActivity {
 
         tabLay.getTabAt(0).setIcon(R.drawable.icons8camera24);
 
-
+        //Começar pela aba do chat
+        vp.setCurrentItem(1);
+        if (ActivityCompat.checkSelfPermission(this,
+                Manifest.permission.READ_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED) {
+            if (ActivityCompat.shouldShowRequestPermissionRationale(this,
+                    Manifest.permission.READ_EXTERNAL_STORAGE)) {
+            } else {
+                ActivityCompat.requestPermissions(this,
+                        new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
+                        5);
+            }
+        }
         vp.addOnPageChangeListener(new ViewPager.OnPageChangeListener() {
             @Override
             public void onPageScrolled(int i, float v, int i1) {
