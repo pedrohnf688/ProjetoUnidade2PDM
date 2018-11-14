@@ -108,6 +108,7 @@ public class FragmentConversa extends Fragment {
                                             Arrays.asList(
                                                     new AuthUI.IdpConfig.GoogleBuilder().build(),
                                                     new AuthUI.IdpConfig.EmailBuilder().build()))
+                                    .setTheme(R.style.FullscreenTheme)
                                     .build(),
                             CODIGO_LOGAR);
                 }
